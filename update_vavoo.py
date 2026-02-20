@@ -15,10 +15,10 @@ def get_vavoo_token():
 def update_playlist():
     token = get_vavoo_token()
     if not token:
-        print("Token alınamadı, işlem iptal.")
+        print("Token alınamadı.")
         return
 
-    # Dosyayı önce internetten çekiyoruz (Yerelde yoksa hata almamak için)
+    # Kendi GitHub linkinden ham listeyi çek
     github_raw_url = "https://raw.githubusercontent.com/nookjoook56-web/Update-m3u/main/playlist.m3u"
     
     try:
@@ -30,18 +30,16 @@ def update_playlist():
             for line in lines:
                 line = line.strip()
                 if "vavoo.to" in line and ".m3u8" in line:
-                    # Mevcut auth parametresini temizle ve yenisini ekle
+                    # Eski auth'u temizle ve yenisini ekle
                     base_url = line.split('?auth=')[0]
                     new_lines.append(f"{base_url}?auth={token}")
                 else:
                     new_lines.append(line)
             
-            # Sonuçları 'playlist.m3u' adıyla kaydet (Git'in bulması için)
+            # 'w' modu ile dosyayı yoksa oluşturur, varsa üzerine yazar
             with open("playlist.m3u", "w", encoding="utf-8") as f:
                 f.write("\n".join(new_lines))
-            print(f"Başarılı! Yeni token uygulandı: {token}")
-        else:
-            print(f"Liste çekilemedi. HTTP Kodu: {response.status_code}")
+            print(f"Liste güncellendi. Yeni Token: {token}")
     except Exception as e:
         print(f"Hata: {e}")
 
