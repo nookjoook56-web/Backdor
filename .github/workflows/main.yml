@@ -1,9 +1,9 @@
-name: Vavoo Token Auto Update
+name: Vavoo Auto Update
 
 on:
   schedule:
-    - cron: '0 */6 * * *' # Her 6 saatte bir otomatik çalışır
-  workflow_dispatch:      # Manuel çalıştırma butonu ekler
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
 
 jobs:
   build:
@@ -23,11 +23,19 @@ jobs:
       - name: Run update script
         run: python update_vavoo.py
 
-      - name: Commit and Push changes
+      - name: Commit and Push
         run: |
-          git config --global user.name 'Github Action'
-          git config --global user.email 'action@github.com'
-          git add playlist.m3u
-          git commit -m "Auto-update Vavoo Token" || exit 0
-          git push
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          
+          # Dosyanın varlığını kontrol et
+          if [ -f "playlist.m3u" ]; then
+            git add playlist.m3u
+            # Değişiklik varsa commit yap, yoksa sessizce devam et
+            git commit -m "Vavoo Token Update" || exit 0
+            git push
+          else
+            echo "Dosya bulunamadı, script başarısız olmuş olabilir."
+            exit 1
+          fi
           
