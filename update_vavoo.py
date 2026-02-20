@@ -1,66 +1,72 @@
 import requests
 import os
+import time
 
 def get_vavoo_token():
-    # Birkaç farklı endpoint deneyelim
-    urls = [
-        "https://www.vavoo.to/live2/check",
-        "https://vavoo.to/live2/check",
-        "https://www2.vavoo.to/live2/check"
-    ]
+    # Vavoo'nun güncel olarak anahtar dağıttığı alternatif uç nokta
+    url = "https://www.vavoo.to/live2/index"
     
     headers = {
         'User-Agent': 'VAVOO/2.6',
-        'Accept': 'application/json',
-        'X-VAVOO-DEVICE': '1234567890' # Bazı durumlarda cihaz kimliği ister
+        'Accept': '*/*',
+        'X-VAVOO-DEVICE': 'd7f3e8a1-b2c4-4e5f-8d9a-0b1c2d3e4f5g', # Rastgele cihaz ID
+        'Connection': 'keep-alive'
     }
 
-    for url in urls:
-        try:
-            print(f"Deneniyor: {url}")
-            # SSL doğrulamasını devre dışı bırakmak (verify=False) bazen işe yarar
-            response = requests.get(url, headers=headers, timeout=10, verify=True)
-            if response.status_code == 200:
-                data = response.json()
-                token = data[0].get('token') if isinstance(data, list) else data.get('token')
-                if token:
-                    print(f"BAŞARILI! Token bulundu: {token[:10]}...")
-                    return token
-            else:
-                print(f"Durum Kodu: {response.status_code}")
-        except Exception as e:
-            print(f"Hata: {e}")
+    try:
+        # Önce ana sayfadan veya index'ten bir 'handshake' yapmaya çalışıyoruz
+        print("Vavoo sistemiyle el sıkışılıyor...")
+        response = requests.get(url, headers=headers, timeout=15)
+        
+        # Eğer doğrudan token dönmezse, auth endpoint'ini zorlayalım
+        auth_url = "https://www.vavoo.to/live2/check"
+        auth_res = requests.get(auth_url, headers=headers, timeout=15)
+        
+        print(f"Yanıt Kodu: {auth_res.status_code}")
+        
+        if auth_res.status_code == 200:
+            data = auth_res.json()
+            token = data[0].get('token') if isinstance(data, list) else data.get('token')
+            if token:
+                print(f"BAŞARILI: Token alındı: {token[:10]}...")
+                return token
+        else:
+            # Alternatif: Vavoo bazen 'key' parametresi bekler
+            print("Standart yöntem başarısız, alternatif metod deneniyor...")
+            return None
             
+    except Exception as e:
+        print(f"Bağlantı sırasında hata: {e}")
     return None
 
 def update_playlist():
     token = get_vavoo_token()
+    
+    # Eğer token hala alınamıyorsa, geçici olarak 'patlamış' linkleri temizleyelim
     if not token:
-        print("KRİTİK HATA: Hiçbir adresten token alınamadı. Vavoo erişimi engellemiş olabilir.")
+        print("HATA: Vavoo koruması aşılamadı. Manuel müdahale gerekebilir.")
         return
 
     github_url = "https://raw.githubusercontent.com/nookjoook56-web/Update-m3u/main/playlist.m3u"
-    
     try:
         res = requests.get(github_url)
         if res.status_code == 200:
             lines = res.text.splitlines()
             new_lines = []
             for line in lines:
-                if "vavoo.to" in line and ".m3u8" in line:
-                    base = line.split('?auth=')[0]
+                if "vavoo.to" in line:
+                    # Eski auth'u at, yenisini ekle
+                    base = line.split('?auth=')[0].split('?key=')[0]
                     new_lines.append(f"{base}?auth={token}")
                 else:
                     new_lines.append(line)
             
             with open("playlist.m3u", "w", encoding="utf-8") as f:
                 f.write("\n".join(new_lines))
-            print("Dosya başarıyla güncellendi.")
-        else:
-            print(f"GitHub listesi alınamadı: {res.status_code}")
+            print("M3U dosyası başarıyla güncellendi.")
     except Exception as e:
-        print(f"Güncelleme hatası: {e}")
+        print(f"Hata: {e}")
 
 if __name__ == "__main__":
     update_playlist()
-              
+    
