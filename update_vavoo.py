@@ -1,50 +1,49 @@
 import requests
 import os
+import random
+
+def get_proxy():
+    """Ücretsiz proxy listesinden rastgele bir proxy çeker."""
+    try:
+        # Ücretsiz proxy sağlayan bir API (PubProxy veya benzeri)
+        proxy_url = "https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http&timeout=10000&country=all&ssl=all&anonymity=all"
+        response = requests.get(proxy_url, timeout=10)
+        if response.status_code == 200:
+            proxies = response.text.splitlines()
+            return random.choice(proxies)
+    except:
+        return None
+    return None
 
 def update_playlist():
-    # 1. Yöntem: Korunmasız ve çalışan Proxy bazlı kaynaklar
-    # Bu kaynaklar Vavoo'nun kısıtlamalarını zaten aşmış sunuculardır.
-    proxy_sources = [
-        "https://raw.githubusercontent.com/iptv-org/iptv/master/streams/tr_vavoo.m3u",
-        "https://vavoo.to/live2/index.m3u8", # Doğrudan index zorlaması
-        "https://hls.vavoo.to/iphone/live/index.m3u8" # Alternatif mobil proxy
-    ]
+    # Vavoo'nun korumasını aşmış, hazır tokenlı kaynak
+    source_url = "https://raw.githubusercontent.com/iptv-org/iptv/master/streams/tr_vavoo.m3u"
+    
+    proxy = get_proxy()
+    proxies_dict = {"http": f"http://{proxy}", "https": f"http://{proxy}"} if proxy else None
     
     headers = {
-        'User-Agent': 'VAVOO/2.6',
-        'Accept': '*/*',
-        'X-VAVOO-DEVICE': 'd7f3e8a1-b2c4-4e5f-8d9a-0b1c2d3e4f5g'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
     }
 
-    m3u_content = ""
-
-    for url in proxy_sources:
-        try:
-            print(f"Proxy üzerinden deneniyor: {url}")
-            # Bazı durumlarda ücretsiz proxy listesi gerekebilir, 
-            # ancak bu kaynaklar genellikle doğrudan yanıt verir.
-            response = requests.get(url, headers=headers, timeout=20)
-            
-            if response.status_code == 200 and ("#EXTM3U" in response.text):
-                m3u_content = response.text
-                print(f"BAŞARILI: Veri proxy üzerinden çekildi!")
-                break
-        except Exception as e:
-            print(f"Bağlantı hatası ({url}): {e}")
-
-    # Eğer hiçbir proxy çalışmazsa, manuel iskeleti oluştur (hata vermemesi için)
-    if not m3u_content:
-        print("KRİTİK: Proxy kaynakları yanıt vermedi. Dosya korundu.")
-        return
-
-    # 2. Dosyayı Yazma İşlemi
-    file_path = "playlist.m3u"
     try:
-        with open(file_path, "w", encoding="utf-8") as f:
-            f.write(m3u_content)
-        print(f"GÜNCEL: {file_path} başarıyla güncellendi.")
+        if proxy:
+            print(f"Özel Proxy kullanılıyor: {proxy}")
+        else:
+            print("Proxy alınamadı, doğrudan bağlanılıyor...")
+
+        # İsteği proxy üzerinden gönder
+        response = requests.get(source_url, headers=headers, proxies=proxies_dict, timeout=30)
+        
+        if response.status_code == 200 and "#EXTM3U" in response.text:
+            with open("playlist.m3u", "w", encoding="utf-8") as f:
+                f.write(response.text)
+            print(f"BAŞARILI: Veri çekildi ve playlist.m3u güncellendi.")
+        else:
+            print(f"HATA: Kaynak yanıt vermedi (Kod: {response.status_code})")
+            
     except Exception as e:
-        print(f"Yazma hatası: {e}")
+        print(f"Bağlantı hatası: {e}")
 
 if __name__ == "__main__":
     update_playlist()
