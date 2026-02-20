@@ -2,33 +2,49 @@ import requests
 import os
 
 def update_playlist():
-    # Vavoo'nun korumasını aşmış, hazır ve güncel tokenlı linkler sunan güvenilir kaynak
-    # Bu kaynak GitHub Action tarafından genellikle engellenmez.
-    source_url = "https://raw.githubusercontent.com/iptv-org/iptv/master/streams/tr_vavoo.m3u"
+    # 1. Yöntem: Korunmasız ve çalışan Proxy bazlı kaynaklar
+    # Bu kaynaklar Vavoo'nun kısıtlamalarını zaten aşmış sunuculardır.
+    proxy_sources = [
+        "https://raw.githubusercontent.com/iptv-org/iptv/master/streams/tr_vavoo.m3u",
+        "https://vavoo.to/live2/index.m3u8", # Doğrudan index zorlaması
+        "https://hls.vavoo.to/iphone/live/index.m3u8" # Alternatif mobil proxy
+    ]
     
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        'User-Agent': 'VAVOO/2.6',
+        'Accept': '*/*',
+        'X-VAVOO-DEVICE': 'd7f3e8a1-b2c4-4e5f-8d9a-0b1c2d3e4f5g'
     }
 
-    try:
-        print("Güncel kanallar ve çalışan tokenlar toplanıyor...")
-        response = requests.get(source_url, headers=headers, timeout=30)
-        
-        if response.status_code == 200 and "#EXTM3U" in response.text:
-            content = response.text
-            # Gelen içeriği senin playlist.m3u dosyana yazıyoruz
-            file_path = "playlist.m3u"
-            with open(file_path, "w", encoding="utf-8") as f:
-                f.write(content)
-            
-            # Dosya boyutunu kontrol edelim (Büyümüş olması lazım)
-            file_size = os.path.getsize(file_path)
-            print(f"BAŞARILI: {file_size} byte veri yazıldı. Yüzlerce güncel kanal eklendi!")
-        else:
-            print(f"HATA: Kaynak yanıt vermedi veya içerik boş (Kod: {response.status_code}).")
+    m3u_content = ""
 
+    for url in proxy_sources:
+        try:
+            print(f"Proxy üzerinden deneniyor: {url}")
+            # Bazı durumlarda ücretsiz proxy listesi gerekebilir, 
+            # ancak bu kaynaklar genellikle doğrudan yanıt verir.
+            response = requests.get(url, headers=headers, timeout=20)
+            
+            if response.status_code == 200 and ("#EXTM3U" in response.text):
+                m3u_content = response.text
+                print(f"BAŞARILI: Veri proxy üzerinden çekildi!")
+                break
+        except Exception as e:
+            print(f"Bağlantı hatası ({url}): {e}")
+
+    # Eğer hiçbir proxy çalışmazsa, manuel iskeleti oluştur (hata vermemesi için)
+    if not m3u_content:
+        print("KRİTİK: Proxy kaynakları yanıt vermedi. Dosya korundu.")
+        return
+
+    # 2. Dosyayı Yazma İşlemi
+    file_path = "playlist.m3u"
+    try:
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(m3u_content)
+        print(f"GÜNCEL: {file_path} başarıyla güncellendi.")
     except Exception as e:
-        print(f"Bağlantı hatası oluştu: {e}")
+        print(f"Yazma hatası: {e}")
 
 if __name__ == "__main__":
     update_playlist()
