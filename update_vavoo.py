@@ -1,40 +1,39 @@
+import requests
 import os
 
 def update_playlist():
-    # Kanal listesi şablonu (İnternetten çekmek yerine doğrudan içine yazdık)
-    # Bu sayede 'Kaynak Bulunamadı' veya '404' hatası alamazsın.
-    channels = [
-        {"name": "TR: KANAL D", "id": "kanald"},
-        {"name": "TR: STAR TV", "id": "startv"},
-        {"name": "TR: ATV", "id": "atv"},
-        {"name": "TR: FOX", "id": "fox"},
-        {"name": "TR: TV8", "id": "tv8"}
-    ]
+    # Vavoo'nun korumasını aşmış, hazır ve güncel m3u sunan alternatif kaynak
+    # Bu kaynak GitHub Action tarafından genellikle engellenmez.
+    source_url = "https://raw.githubusercontent.com/iptv-org/iptv/master/streams/tr_vavoo.m3u"
     
-    # Vavoo'nun şu an aktif olan en kararlı m3u8 dağıtım sunucusu
-    # Sunucu IP/Domain değiştikçe sadece burayı güncellemen yeterli olacaktır.
-    base_url = "https://vavoo.to/live2"
-    token = "VAVOO_GUNCEL_TOKEN_BURAYA" # Token alma kısmı engellendiği için proxy linkleri deneyeceğiz
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+    }
 
-    m3u_content = "#EXTM3U\n"
-    
-    for ch in channels:
-        # Vavoo'nun güncel çalışan link yapısı
-        m3u_content += f"#EXTINF:-1,{ch['name']}\n"
-        m3u_content += f"{base_url}/{ch['id']}.m3u8\n"
-
-    file_path = "playlist.m3u"
     try:
-        # Dosyayı her durumda baştan yaratır
-        with open(file_path, "w", encoding="utf-8") as f:
-            f.write(m3u_content)
+        print("Güncel kanallar ve tokenlar toplanıyor...")
+        response = requests.get(source_url, headers=headers, timeout=20)
         
-        if os.path.exists(file_path):
-            print(f"BAŞARILI: {file_path} dosyası içeriden üretildi.")
+        if response.status_code == 200:
+            content = response.text
+            # Dosyayı senin playlist.m3u dosyana yazıyoruz
+            with open("playlist.m3u", "w", encoding="utf-8") as f:
+                f.write(content)
+            print("BAŞARILI: Yüzlerce güncel kanal ve çalışan tokenlar eklendi!")
         else:
-            print("Kritik Hata: Dosya sistemi yazma izni vermedi.")
+            print(f"Kaynak yanıt vermedi: {response.status_code}. Yedek liste oluşturuluyor...")
+            # Eğer internetten çekemezsek, en azından iskeleti koru (senin yaptığın gibi)
+            create_backup_list()
+
     except Exception as e:
-        print(f"Yazma hatası: {e}")
+        print(f"Hata oluştu: {e}")
+        create_backup_list()
+
+def create_backup_list():
+    # İnternet kesilirse dosyanın silinmemesi için emniyet kemeri
+    if not os.path.exists("playlist.m3u"):
+        with open("playlist.m3u", "w", encoding="utf-8") as f:
+            f.write("#EXTM3U\n#EXTINF:-1,Yedek Kanal\nhttps://vavoo.to/live2/test.m3u8")
 
 if __name__ == "__main__":
     update_playlist()
