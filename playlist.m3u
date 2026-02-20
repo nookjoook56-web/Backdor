@@ -6,6 +6,22 @@ https://vavoo.to/live2/startv.m3u8
 #EXTINF:-1,TR: ATV
 https://vavoo.to/live2/atv.m3u8
 #EXTINF:-1,TR: FOX
-https://vavoo.to/live2/fox.m3u8
+https://vavoo.to/live2/now.m3u8
 #EXTINF:-1,TR: TV8
 https://vavoo.to/live2/tv8.m3u8
+#EXTINF:-1,TR: BEIN SPORTS 1
+https://vavoo.to/live2/play3/593493860.m3u8
+#EXTINF:-1,TR: BEIN SPORTS 2
+https://vavoo.to/live2/play3/165415732.m3u8
+#EXTINF:-1,TR: BEIN SPORTS 3
+https://vavoo.to/live2/play3/845123654.m3u8
+#EXTINF:-1,TR: BEIN SPORTS 4
+https://vavoo.to/live2/play3/452136987.m3u8
+#EXTINF:-1,TR: BEIN SPORTS HABER
+https://vavoo.to/live2/play3/213546879.m3u8
+#EXTINF:-1,TR: S SPORT 1
+https://vavoo.to/live2/play3/753159486.m3u8
+#EXTINF:-1,TR: S SPORT 2
+https://vavoo.to/live2/play3/951357462.m3u8
+#EXTINF:-1,TR: TRT SPOR
+https://vavoo.to/live2/trtspor.m3u8
