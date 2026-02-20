@@ -2,57 +2,47 @@ import requests
 import os
 
 def update_playlist():
-    # Vavoo'nun ana veri kaynağı (Kanal listesi ve güncel linkler burada)
-    vavoo_json_url = "https://www.vavoo.to/live2/index.json"
+    # Engellenen API yerine, topluluk tarafından güncellenen güncel ham veri kaynağı
+    # Bu kaynak genellikle çalışan auth tokenları önceden eklenmiş linkler sunar
+    backup_sources = [
+        "https://raw.githubusercontent.com/De-Y/vavoo/main/vavoo.m3u",
+        "https://archive.org/download/vavoo-turk/vavoo.m3u"
+    ]
     
     headers = {
-        'User-Agent': 'VAVOO/2.6',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         'Accept': '*/*'
     }
 
+    m3u_content = None
+
+    for source in backup_sources:
+        try:
+            print(f"Kaynak deneniyor: {source}")
+            response = requests.get(source, headers=headers, timeout=15)
+            if response.status_code == 200 and "#EXTM3U" in response.text:
+                m3u_content = response.text
+                print(f"BAŞARILI: {source} üzerinden güncel liste alındı.")
+                break
+        except Exception as e:
+            print(f"Kaynak hatası: {e}")
+
+    if not m3u_content:
+        print("KRİTİK HATA: Hiçbir kaynaktan güncel liste alınamadı.")
+        return
+
+    # Dosyayı yerel dizine (playlist.m3u) kaydet
+    file_path = "playlist.m3u"
     try:
-        print("Vavoo güncel veri tabanı çekiliyor...")
-        response = requests.get(vavoo_json_url, headers=headers, timeout=20)
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(m3u_content)
         
-        if response.status_code != 200:
-            print(f"HATA: Vavoo verilerine ulaşılamadı. Kod: {response.status_code}")
-            return
-
-        # Vavoo'dan gelen tüm kanal verileri
-        channels = response.json()
-        print(f"Başarılı! {len(channels)} adet kanal verisi alındı.")
-
-        # Senin mevcut m3u dosyanı GitHub'dan çekelim
-        github_url = "https://raw.githubusercontent.com/nookjoook56-web/Update-m3u/main/playlist.m3u"
-        github_res = requests.get(github_url)
-        
-        if github_res.status_code == 200:
-            m3u_content = github_res.text
-            new_lines = []
-            
-            # Vavoo linklerini yeni verilere göre güncelle
-            # Not: Vavoo verileri genellikle 'url' veya 'url2' içinde token barındırır
-            # Bu örnekte en taze link yapısını oluşturuyoruz
-            for line in m3u_content.splitlines():
-                if "vavoo.to" in line and ".m3u8" in line:
-                    # Burada kanalın ID'sini koruyup ana veri kaynağıyla eşleştirebiliriz
-                    # Ancak en garantisi tüm Vavoo linklerini tazelemektir
-                    # Şimdilik mevcut linklerini koruyup sadece sistemi canlandırıyoruz
-                    new_lines.append(line) 
-                else:
-                    new_lines.append(line)
-
-            # Dosyayı kaydet
-            file_path = "playlist.m3u"
-            with open(file_path, "w", encoding="utf-8") as f:
-                f.write("\n".join(new_lines))
-            
-            print(f"BAŞARILI: {file_path} dosyası güncellendi.")
+        if os.path.exists(file_path):
+            print(f"TAMAMLANDI: {file_path} dosyası yeni verilerle oluşturuldu.")
         else:
-            print("Kendi m3u dosyanıza ulaşılamadı.")
-
+            print("HATA: Dosya yazımı başarısız.")
     except Exception as e:
-        print(f"Sistem hatası: {e}")
+        print(f"Yazma hatası: {e}")
 
 if __name__ == "__main__":
     update_playlist()
